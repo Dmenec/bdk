@@ -269,10 +269,8 @@ fn test_tx_conflict_handling() {
             exp_chain_txouts: HashSet::from([("tx1", 0), ("tx_conflict_1", 0)]),
             exp_unspents: HashSet::from([("tx_conflict_1", 0)]),
             exp_balance: Balance {
-                immature: Amount::ZERO,
-                trusted_pending: Amount::from_sat(20000),
-                untrusted_pending: Amount::ZERO,
-                confirmed: Amount::ZERO,
+                untrusted_pending: Amount::from_sat(20000),
+                ..Default::default()
             },
         },
         Scenario {
@@ -364,10 +362,8 @@ fn test_tx_conflict_handling() {
             exp_chain_txouts: HashSet::from([("A", 0), ("B", 0), ("C", 0)]),
             exp_unspents: HashSet::from([("C", 0)]),
             exp_balance: Balance {
-                immature: Amount::ZERO,
-                trusted_pending: Amount::from_sat(30000),
-                untrusted_pending: Amount::ZERO,
-                confirmed: Amount::ZERO,
+                untrusted_pending: Amount::from_sat(30000),
+                ..Default::default()
             },
         },
         Scenario {
@@ -697,7 +693,7 @@ fn test_tx_conflict_handling() {
             exp_chain_txs: HashSet::from(["root", "tx"]),
             exp_chain_txouts: HashSet::from([("tx", 0)]),
             exp_unspents: HashSet::from([("tx", 0)]),
-            exp_balance: Balance { trusted_pending: Amount::from_sat(9000), ..Default::default() }
+            exp_balance: Balance { untrusted_pending: Amount::from_sat(9000), ..Default::default() }
         },
         Scenario {
             name: "tx spends from 2 conflicting transactions where a conflict spends another",
@@ -764,7 +760,7 @@ fn test_tx_conflict_handling() {
             exp_chain_txs: HashSet::from(["A", "S1", "B"]),
             exp_chain_txouts: HashSet::from([("A", 0), ("B", 0), ("S1", 0)]),
             exp_unspents: HashSet::from([("B", 0)]),
-            exp_balance: Balance { trusted_pending: Amount::from_sat(8_000), ..Default::default() },
+            exp_balance: Balance { untrusted_pending: Amount::from_sat(8_000), ..Default::default() },
         },
         Scenario {
             name: "tx spends from 2 conflicting transactions where the conflict is nested (different last_seens)",
@@ -801,7 +797,7 @@ fn test_tx_conflict_handling() {
             exp_chain_txs: HashSet::from(["A", "S1", "B"]),
             exp_chain_txouts: HashSet::from([("A", 0), ("B", 0), ("S1", 0)]),
             exp_unspents: HashSet::from([("B", 0)]),
-            exp_balance: Balance { trusted_pending: Amount::from_sat(8_000), ..Default::default() },
+            exp_balance: Balance { untrusted_pending: Amount::from_sat(8_000), ..Default::default() },
         },
         Scenario {
             name: "assume-canonical-tx displaces unconfirmed chain",
@@ -1028,13 +1024,19 @@ fn test_tx_conflict_handling() {
         );
 
         let balance = canonical_view.balance(
-            env.indexer.outpoints().iter().cloned(),
-            |_, txout| {
-                env.indexer
-                    .index_of_spk(txout.txout.script_pubkey.as_script())
-                    .is_some()
+            env.indexer.outpoints().iter().map(|(_, op)| *op),
+            |c_tx| {
+                c_tx.tx.input.iter().any(|txin| {
+                    let op = txin.previous_output;
+                    !op.is_null()
+                        && canonical_view.txout(op).is_none_or(|txo| {
+                            env.indexer
+                                .index_of_spk(txo.txout.script_pubkey.clone())
+                                .is_none()
+                        })
+                })
             },
-            0,
+            |pos| pos.is_confirmed(),
         );
         assert_eq!(
             balance, scenario.exp_balance,
