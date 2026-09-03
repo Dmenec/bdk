@@ -89,6 +89,7 @@ fn do_bench(indexed_tx_graph: &KeychainTxGraph, chain: &LocalChain) {
             op.into_iter().map(|(_, o)| o),
             |_| false,
             |pos| pos.is_confirmed(),
+            |_txout| false,
         );
     assert_eq!(bal.total(), AMOUNT * TX_CT as u64);
 }

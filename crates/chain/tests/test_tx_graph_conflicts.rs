@@ -120,6 +120,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(30000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -156,6 +157,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(30000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -199,6 +201,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(40000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -236,6 +239,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(30000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -321,6 +325,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::ZERO,
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::from_sat(50000),
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -406,6 +411,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::ZERO,
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::from_sat(20000),
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -453,6 +459,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(30000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -499,6 +506,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(30000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -545,6 +553,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::ZERO,
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::from_sat(50000),
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -597,6 +606,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::ZERO,
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::from_sat(50000),
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -630,6 +640,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::ZERO,
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::from_sat(800),
+                locked: Amount::ZERO
             }
         },
         Scenario {
@@ -845,6 +856,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(19_000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::from_sat(21_000),
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -893,6 +905,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(19_000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::from_sat(21_000),
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -937,6 +950,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::from_sat(18_000),
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             },
         },
         Scenario {
@@ -959,6 +973,7 @@ fn test_tx_conflict_handling() {
                 trusted_pending: Amount::ZERO,
                 untrusted_pending: Amount::ZERO,
                 confirmed: Amount::ZERO,
+                locked: Amount::ZERO
             }
         }
     ];
@@ -1037,6 +1052,7 @@ fn test_tx_conflict_handling() {
                 })
             },
             |pos| pos.is_confirmed(),
+            |_txout| false,
         );
         assert_eq!(
             balance, scenario.exp_balance,

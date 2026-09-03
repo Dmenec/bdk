@@ -329,6 +329,7 @@ fn get_balance(
             outpoints.into_iter().map(|(_, op)| op),
             |_| false,
             |pos| pos.is_confirmed(),
+            |_txout| false,
         );
     Ok(balance)
 }

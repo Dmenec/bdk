@@ -98,6 +98,7 @@ fn test_min_confirmations_parameter() {
         [outpoint],
         |_tx| false, // never taint (trust all)
         settled(tip_height, 1),
+        |_txout| false,
     );
 
     assert_eq!(balance_1_conf.confirmed, Amount::from_sat(50_000));
@@ -108,6 +109,7 @@ fn test_min_confirmations_parameter() {
         [outpoint],
         |_tx| false, // never taint (trust all)
         settled(tip_height, 6),
+        |_txout| false,
     );
     assert_eq!(balance_6_conf.confirmed, Amount::from_sat(50_000));
     assert_eq!(balance_6_conf.trusted_pending, Amount::ZERO);
@@ -117,6 +119,7 @@ fn test_min_confirmations_parameter() {
         [outpoint],
         |_tx| false, // never taint (trust all)
         settled(tip_height, 7),
+        |_txout| false,
     );
     assert_eq!(balance_7_conf.confirmed, Amount::ZERO);
     assert_eq!(balance_7_conf.trusted_pending, Amount::from_sat(50_000));
@@ -126,6 +129,7 @@ fn test_min_confirmations_parameter() {
         [outpoint],
         |_tx| false, // never taint (trust all)
         settled(tip_height, 0),
+        |_txout| false,
     );
     assert_eq!(balance_0_conf.confirmed, Amount::from_sat(50_000));
     assert_eq!(balance_0_conf.trusted_pending, Amount::ZERO);
@@ -187,6 +191,7 @@ fn test_min_confirmations_with_untrusted_tx() {
         [outpoint],
         |_tx| true, // taint everything
         settled(tip_height, 5),
+        |_txout| false,
     );
 
     // Should be untrusted pending (not enough confirmations and not trusted)
@@ -338,7 +343,12 @@ fn test_min_confirmations_multiple_transactions() {
     // tx0: 11 confirmations -> confirmed
     // tx1: 6 confirmations -> confirmed
     // tx2: 3 confirmations -> trusted pending
-    let balance = canonical_view.balance(outpoints.clone(), |_tx| false, settled(tip_height, 5));
+    let balance = canonical_view.balance(
+        outpoints.clone(),
+        |_tx| false,
+        settled(tip_height, 5),
+        |_txout| false,
+    );
 
     assert_eq!(
         balance.confirmed,
@@ -354,7 +364,12 @@ fn test_min_confirmations_multiple_transactions() {
     // tx0: 11 confirmations -> confirmed
     // tx1: 6 confirmations -> trusted pending
     // tx2: 3 confirmations -> trusted pending
-    let balance_high = canonical_view.balance(outpoints, |_tx| false, settled(tip_height, 10));
+    let balance_high = canonical_view.balance(
+        outpoints,
+        |_tx| false,
+        settled(tip_height, 10),
+        |_txout| false,
+    );
 
     assert_eq!(
         balance_high.confirmed,
@@ -476,6 +491,7 @@ fn test_balance_taint_propagates_through_unconfirmed_ancestry() {
                 .any(|txin| !owned.contains(&txin.previous_output))
         },
         |pos| pos.is_confirmed(),
+        |_txout| false,
     );
 
     assert_eq!(balance.confirmed, Amount::ZERO);
@@ -514,7 +530,12 @@ fn test_balance_is_settled_is_authoritative_for_unconfirmed() {
 
     // An `is_settled` that claims everything is settled counts the (mature, non-coinbase)
     // unconfirmed output as settled rather than dropping it.
-    let balance = view.balance([OutPoint::new(txid, 0)], |_| false, |_| true);
+    let balance = view.balance(
+        [OutPoint::new(txid, 0)],
+        |_| false,
+        |_| true,
+        |_txout| false,
+    );
     assert_eq!(balance.confirmed, Amount::from_sat(50_000));
     assert_eq!(balance.immature, Amount::ZERO);
     assert_eq!(balance.trusted_pending, Amount::ZERO);
@@ -595,6 +616,7 @@ fn test_balance_taint_stops_at_settled_ancestor() {
                     .any(|txin| !owned.contains(&txin.previous_output))
             },
             |pos| pos.is_confirmed(),
+            |_txout| false,
         )
         .map(|(txout, eligibility)| (txout.outpoint, eligibility))
         .collect::<std::collections::HashMap<_, _>>();
@@ -663,7 +685,7 @@ fn test_classify_immature_and_settled() {
     ];
 
     let by_op = view
-        .classify_outpoints(ops, |_| false, |pos| pos.is_confirmed())
+        .classify_outpoints(ops, |_| false, |pos| pos.is_confirmed(), |_txout| false)
         .map(|(txout, eligibility)| (txout.outpoint, eligibility))
         .collect::<std::collections::HashMap<_, _>>();
     assert_eq!(
@@ -673,7 +695,7 @@ fn test_classify_immature_and_settled() {
     assert_eq!(by_op[&OutPoint::new(normal_txid, 0)], Eligibility::Settled);
 
     // The balance buckets reflect the same classification.
-    let balance = view.balance(ops, |_| false, |pos| pos.is_confirmed());
+    let balance = view.balance(ops, |_| false, |pos| pos.is_confirmed(), |_txout| false);
     assert_eq!(balance.immature, Amount::from_sat(50_000));
     assert_eq!(balance.confirmed, Amount::from_sat(30_000));
 }
@@ -765,6 +787,7 @@ fn test_balance_taint_shared_ancestor() {
                 .any(|txin| !owned.contains(&txin.previous_output))
         },
         |pos| pos.is_confirmed(),
+        |_txout| false,
     );
     assert_eq!(balance.trusted_pending, Amount::ZERO);
     assert_eq!(balance.untrusted_pending, Amount::from_sat(29_000 + 19_000));
@@ -820,6 +843,7 @@ fn test_classify_skips_spent_and_unknown() {
             ],
             |_| false,
             |pos| pos.is_confirmed(),
+            |_txout| false,
         )
         .collect::<Vec<_>>();
 
@@ -861,7 +885,12 @@ fn test_immature_coinbase_stays_immature_when_unsettled() {
 
     // Require 3 confirmations to be settled.
     let by_op = view
-        .classify_outpoints([OutPoint::new(txid, 0)], |_| false, settled(tip_height, 3))
+        .classify_outpoints(
+            [OutPoint::new(txid, 0)],
+            |_| false,
+            settled(tip_height, 3),
+            |_txout| false,
+        )
         .map(|(txout, e)| (txout.outpoint, e))
         .collect::<std::collections::HashMap<_, _>>();
 
@@ -902,7 +931,12 @@ fn test_mature_coinbase_is_settled_not_immature() {
     let tip_height = view.tip().height;
 
     let by_op = view
-        .classify_outpoints([OutPoint::new(txid, 0)], |_| false, settled(tip_height, 3))
+        .classify_outpoints(
+            [OutPoint::new(txid, 0)],
+            |_| false,
+            settled(tip_height, 3),
+            |_txout| false,
+        )
         .map(|(txout, e)| (txout.outpoint, e))
         .collect::<std::collections::HashMap<_, _>>();
 
@@ -957,6 +991,7 @@ fn test_unsettled_unknown_when_parent_root_missing() {
             [OutPoint::new(child2_txid, 0)],
             |_| false,
             |pos| pos.is_confirmed(),
+            |_txout| false,
         )
         .map(|(txout, e)| (txout.outpoint, e))
         .collect::<std::collections::HashMap<_, _>>();
@@ -1009,4 +1044,55 @@ fn test_evicted_stale_anchored_tx_not_canonical() {
         !view.txs().any(|tx| tx.txid == txid),
         "evicted leftover tx must not be canonical"
     );
+}
+
+/// A settled output for which `is_locked` returns true is classified `Locked` and counted in
+/// `Balance::locked` instead of `confirmed`.
+#[test]
+fn test_classify_locked() {
+    let blocks: BTreeMap<u32, BlockHash> =
+        [(0, hash!("g")), (1, hash!("tip"))].into_iter().collect();
+    let chain = LocalChain::from_blocks(blocks).unwrap();
+    let mut tx_graph = TxGraph::<ConfirmationBlockTime>::default();
+    let spk = ScriptBuf::new();
+
+    let tx = Transaction {
+        input: vec![TxIn {
+            previous_output: OutPoint::new(hash!("ext"), 0),
+            ..Default::default()
+        }],
+        output: vec![TxOut {
+            value: Amount::from_sat(40_000),
+            script_pubkey: spk.clone(),
+        }],
+        ..new_tx(0)
+    };
+    let txid = tx.compute_txid();
+    let _ = tx_graph.insert_tx(tx.clone());
+    let _ = tx_graph.insert_anchor(
+        txid,
+        ConfirmationBlockTime {
+            block_id: chain.get(1).unwrap().block_id(),
+            confirmation_time: 100,
+        },
+    );
+
+    let view = chain.canonical_view(&tx_graph, chain.tip().block_id(), Default::default());
+    let ops = [OutPoint::new(txid, 0)];
+
+    // Timelock unmet
+    let (_, eligibility) = view
+        .classify_outpoints(ops, |_| false, |pos| pos.is_confirmed(), |_| true)
+        .next()
+        .unwrap();
+    assert_eq!(eligibility, Eligibility::Locked);
+
+    let balance = view.balance(ops, |_| false, |pos| pos.is_confirmed(), |_| true);
+    assert_eq!(balance.locked, Amount::from_sat(40_000));
+    assert_eq!(balance.confirmed, Amount::ZERO);
+
+    // Timelock met
+    let balance = view.balance(ops, |_| false, |pos| pos.is_confirmed(), |_| false);
+    assert_eq!(balance.confirmed, Amount::from_sat(40_000));
+    assert_eq!(balance.locked, Amount::ZERO);
 }

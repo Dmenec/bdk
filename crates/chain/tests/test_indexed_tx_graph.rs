@@ -565,6 +565,7 @@ fn test_list_owned_txouts() {
                     })
                 },
                 |pos| pos.is_confirmed(),
+                |_txout| false,
             );
 
             let confirmed_txouts_txid = txouts
@@ -658,7 +659,8 @@ fn test_list_owned_txouts() {
                 immature: Amount::from_sat(70000),          // immature coinbase
                 trusted_pending: Amount::from_sat(25000),   // tx3, tx5
                 untrusted_pending: Amount::from_sat(20000), // tx4
-                confirmed: Amount::ZERO                     // Nothing is confirmed yet
+                confirmed: Amount::ZERO,                    // Nothing is confirmed yet
+                locked: Amount::ZERO
             }
         );
     }
@@ -696,7 +698,8 @@ fn test_list_owned_txouts() {
                 immature: Amount::from_sat(70000),          // immature coinbase
                 trusted_pending: Amount::from_sat(25000),   // tx3, tx5
                 untrusted_pending: Amount::from_sat(20000), // tx4
-                confirmed: Amount::from_sat(0)              // tx2 got confirmed (but spent by 3)
+                confirmed: Amount::from_sat(0),             // tx2 got confirmed (but spent by 3)
+                locked: Amount::ZERO
             }
         );
     }
@@ -737,7 +740,8 @@ fn test_list_owned_txouts() {
                 immature: Amount::from_sat(70000),          // immature coinbase
                 trusted_pending: Amount::from_sat(15000),   // tx5
                 untrusted_pending: Amount::from_sat(20000), // tx4
-                confirmed: Amount::from_sat(10000)          // tx3 got confirmed
+                confirmed: Amount::from_sat(10000),         // tx3 got confirmed
+                locked: Amount::ZERO
             }
         );
     }
@@ -778,7 +782,8 @@ fn test_list_owned_txouts() {
                 immature: Amount::from_sat(70000),          // immature coinbase
                 trusted_pending: Amount::from_sat(15000),   // tx5
                 untrusted_pending: Amount::from_sat(20000), // tx4
-                confirmed: Amount::from_sat(10000)          // tx3 is confirmed
+                confirmed: Amount::from_sat(10000),         // tx3 is confirmed
+                locked: Amount::ZERO
             }
         );
     }
@@ -794,7 +799,8 @@ fn test_list_owned_txouts() {
                 immature: Amount::ZERO,                     // coinbase matured
                 trusted_pending: Amount::from_sat(15000),   // tx5
                 untrusted_pending: Amount::from_sat(20000), // tx4
-                confirmed: Amount::from_sat(80000)          // tx1 + tx3
+                confirmed: Amount::from_sat(80000),         // tx1 + tx3
+                locked: Amount::ZERO
             }
         );
     }
