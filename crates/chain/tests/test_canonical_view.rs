@@ -1062,3 +1062,54 @@ fn test_evicted_stale_anchored_tx_not_canonical() {
         "evicted leftover tx must not be canonical"
     );
 }
+
+/// A settled output for which `is_locked` returns true is classified `Locked` and counted in
+/// `Balance::locked` instead of `confirmed`.
+#[test]
+fn test_classify_locked() {
+    let blocks: BTreeMap<u32, BlockHash> =
+        [(0, hash!("g")), (1, hash!("tip"))].into_iter().collect();
+    let chain = LocalChain::from_blocks(blocks).unwrap();
+    let mut tx_graph = TxGraph::<ConfirmationBlockTime>::default();
+    let spk = ScriptBuf::new();
+
+    let tx = Transaction {
+        input: vec![TxIn {
+            previous_output: OutPoint::new(hash!("ext"), 0),
+            ..Default::default()
+        }],
+        output: vec![TxOut {
+            value: Amount::from_sat(40_000),
+            script_pubkey: spk.clone(),
+        }],
+        ..new_tx(0)
+    };
+    let txid = tx.compute_txid();
+    let _ = tx_graph.insert_tx(tx.clone());
+    let _ = tx_graph.insert_anchor(
+        txid,
+        ConfirmationBlockTime {
+            block_id: chain.get(1).unwrap().block_id(),
+            confirmation_time: 100,
+        },
+    );
+
+    let view = chain.canonical_view(&tx_graph, chain.tip().block_id(), Default::default());
+    let ops = [OutPoint::new(txid, 0)];
+
+    // Timelock unmet
+    let (_, eligibility) = view
+        .classify_outpoints(ops, |_| false, |pos| pos.is_confirmed(), |_| true)
+        .next()
+        .unwrap();
+    assert_eq!(eligibility, Eligibility::Locked);
+
+    let balance = view.balance(ops, |_| false, |pos| pos.is_confirmed(), |_| true);
+    assert_eq!(balance.locked, Amount::from_sat(40_000));
+    assert_eq!(balance.confirmed, Amount::ZERO);
+
+    // Timelock met
+    let balance = view.balance(ops, |_| false, |pos| pos.is_confirmed(), |_| false);
+    assert_eq!(balance.confirmed, Amount::from_sat(40_000));
+    assert_eq!(balance.locked, Amount::ZERO);
+}
